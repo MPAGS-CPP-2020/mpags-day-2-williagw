@@ -1,13 +1,16 @@
 // Standard Library includes
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <vector>
 
 // For std::isalpha and std::isupper
 #include <cctype>
 
+// Include header files of user-defined functions
 #include "TransformChar.hpp"
 #include "ProcessCmdLine.hpp"
+#include "RunCaesarCipher.hpp"
 
 // Main function of the mpags-cipher program
 int main(int argc, char* argv[])
@@ -20,10 +23,15 @@ int main(int argc, char* argv[])
   bool versionRequested {false};
   std::string inputFile {""};
   std::string outputFile {""};
-  bool cmdLinePars {processCommandLine(cmdLineArgs, helpRequested, versionRequested, inputFile, outputFile)};
+  bool encrypt{true};
+  size_t k{0};
+
+  // Call function to handle parsing of command line, quits program if an error occurs parsing command line
+  bool cmdLinePars {processCommandLine(cmdLineArgs, helpRequested, versionRequested, inputFile, outputFile, encrypt, k)};
   if (cmdLinePars==false){
     return 1;
   }
+
   // Handle help, if requested
   if (helpRequested) {
     // Line splitting for readability
@@ -53,31 +61,55 @@ int main(int argc, char* argv[])
   char inputChar {'x'};
   std::string inputText {""};
 
-  // Read in user input from stdin/file
-  // Warn that input file option not yet implemented
+  // Read in user input from stdin/file, exits with error message if problem opening file
   if (!inputFile.empty()) {
-    std::cout << "[warning] input from file ('"
-              << inputFile
-              << "') not implemented yet, using stdin\n";
+    std::ifstream in_file {inputFile};
+    bool ok_to_read = in_file.good();
+    if(ok_to_read)
+    {
+      // Loop over each character input file
+      while(in_file >> inputChar)
+        {
+          inputText += transformChar(inputChar);
+        }
+      in_file.close();
+    }
+    else
+    {
+      std::cout << "Problem opening the input file" << std::endl;
+      return 1;
+    }
+  }
+  else{
+    // Loop over each character from user input
+    // (until Return then CTRL-D (EOF) pressed)
+    while(std::cin >> inputChar)
+    {
+      inputText += transformChar(inputChar);
+    }
   }
 
-  // Loop over each character from user input
-  // (until Return then CTRL-D (EOF) pressed)
-  while(std::cin >> inputChar)
-  {
-    inputText += transformChar(inputChar);
-  }
+  // Implement encryption/decryption 
+  std::string outputText{runCaesarCipher(inputText, k, encrypt)};
 
-  // Output the transliterated text
-  // Warn that output file option not yet implemented
+
+  // Output the transliterated text, exits with error message if problem opening file
   if (!outputFile.empty()) {
-    std::cout << "[warning] output to file ('"
-              << outputFile
-              << "') not implemented yet, using stdout\n";
+    std::ofstream out_file {outputFile};
+    bool ok_to_write = out_file.good();
+    if(ok_to_write)
+    {
+      out_file << outputText << std::endl;
+    }
+    else{
+      std::cout << "There was a problem opening the output file" << std::endl;
+      return 1;
+    }
+    out_file.close(); 
   }
-
-  std::cout << inputText << std::endl;
-
+  else{
+    std::cout << outputText << std::endl;
+  }
   // No requirement to return from main, but we do so for clarity
   // and for consistency with other functions
   return 0;
